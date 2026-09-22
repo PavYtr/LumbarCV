@@ -26,7 +26,7 @@ custom_hooks = [
         update_buffers=True),
 ]
 data_mode = 'topdown'
-data_root = 'data/LumbarCoco/'
+data_root = 'data/LumbarCoco2000/'
 dataset_type = 'CocoDataset'
 default_hooks = dict(
     badcase=dict(
@@ -58,7 +58,7 @@ input_size = (
     256,
     512,
 )
-load_from = '/home/PavYtr/Projects/cv/work_dirs/rtmpose-m-lumbar-coco2000-210e/epoch_210.pth'
+load_from = 'work_dirs/rtmpose-m-lumbar-coco2000-210e/best_PCK@0.05_PCK_epoch_90.pth'
 log_level = 'INFO'
 log_processor = dict(
     _scope_='mmpose',
@@ -168,7 +168,7 @@ test_dataloader = dict(
         ann_file='annotations/lumbar_keypoints_test.json',
         data_mode='topdown',
         data_prefix=dict(img='images/'),
-        data_root='data/LumbarCoco/',
+        data_root='data/LumbarCoco2000/',
         metainfo=dict(from_file='configs/_base_/datasets/lumbar_coco.py'),
         pipeline=[
             dict(backend_args=dict(backend='local'), type='LoadImage'),
@@ -182,12 +182,12 @@ test_dataloader = dict(
         test_mode=True,
         type='CocoDataset'),
     drop_last=False,
-    num_workers=4,
-    persistent_workers=True,
+    num_workers=0,
+    persistent_workers=False,
     sampler=dict(round_up=False, shuffle=False, type='DefaultSampler'))
 test_evaluator = [
     dict(
-        ann_file='data/LumbarCoco/annotations/lumbar_keypoints_test.json',
+        ann_file='data/LumbarCoco2000/annotations/lumbar_keypoints_test.json',
         type='CocoMetric'),
     dict(norm_item='bbox', prefix='PCK@0.05', thr=0.05, type='PCKAccuracy'),
     dict(norm_item='bbox', prefix='PCK@0.03', thr=0.03, type='PCKAccuracy'),
@@ -201,7 +201,7 @@ train_dataloader = dict(
         ann_file='annotations/lumbar_keypoints_train.json',
         data_mode='topdown',
         data_prefix=dict(img='images/'),
-        data_root='data/LumbarCoco/',
+        data_root='data/LumbarCoco2000/',
         metainfo=dict(from_file='configs/_base_/datasets/lumbar_coco.py'),
         pipeline=[
             dict(backend_args=dict(backend='local'), type='LoadImage'),
@@ -278,7 +278,7 @@ val_dataloader = dict(
         ann_file='annotations/lumbar_keypoints_val.json',
         data_mode='topdown',
         data_prefix=dict(img='images/'),
-        data_root='data/LumbarCoco/',
+        data_root='data/LumbarCoco2000/',
         metainfo=dict(from_file='configs/_base_/datasets/lumbar_coco.py'),
         pipeline=[
             dict(backend_args=dict(backend='local'), type='LoadImage'),
@@ -297,7 +297,7 @@ val_dataloader = dict(
     sampler=dict(round_up=False, shuffle=False, type='DefaultSampler'))
 val_evaluator = [
     dict(
-        ann_file='data/LumbarCoco/annotations/lumbar_keypoints_val.json',
+        ann_file='data/LumbarCoco2000/annotations/lumbar_keypoints_val.json',
         type='CocoMetric'),
     dict(norm_item='bbox', prefix='PCK@0.05', thr=0.05, type='PCKAccuracy'),
     dict(norm_item='bbox', prefix='PCK@0.03', thr=0.03, type='PCKAccuracy'),
@@ -324,4 +324,4 @@ visualizer = dict(
         dict(type='LocalVisBackend'),
         dict(type='TensorboardVisBackend'),
     ])
-work_dir = 'work_dirs/rtmpose-m-lumbar-coco2000-210e//test-last'
+work_dir = 'work_dirs/rtmpose-m_lumbar-coco2000_1stage_test'
