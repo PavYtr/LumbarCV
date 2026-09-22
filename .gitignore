@@ -1,0 +1,63 @@
+# Source and generated datasets
+/BUU-LSPINE_400/
+/data/
+
+# Trained models, checkpoints, and experiment artifacts
+/work_dirs/
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.onnx
+*.engine
+*.tflite
+*.h5
+*.keras
+*.pb
+events.out.tfevents.*
+/wandb/
+/mlruns/
+
+# Generated demo output
+/demo.jpg
+/output/
+
+# Python caches, test output, and build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+build/
+dist/
+*.egg-info/
+
+# Local Python environments and secrets
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# Local tooling and editor state
+/.agents/
+/.codex/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS metadata and temporary files
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.temp
