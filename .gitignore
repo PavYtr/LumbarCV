@@ -1,5 +1,6 @@
 # Source and generated datasets
 /BUU-LSPINE_400/
+/BUU-LSPINE_2000/
 /data/
 
 # Trained models, checkpoints, and experiment artifacts
@@ -20,7 +21,7 @@ events.out.tfevents.*
 
 # Generated demo output
 /demo.jpg
-/output/
+
 
 # Python caches, test output, and build artifacts
 __pycache__/
@@ -61,3 +62,5 @@ Thumbs.db
 *.log
 *.tmp
 *.temp
+
+dataset2024.zip
