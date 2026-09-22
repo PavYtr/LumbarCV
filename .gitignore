@@ -4,7 +4,6 @@
 /data/
 
 # Trained models, checkpoints, and experiment artifacts
-/work_dirs/
 *.pth
 *.pt
 *.ckpt
@@ -59,8 +58,8 @@ env/
 # OS metadata and temporary files
 .DS_Store
 Thumbs.db
-*.log
 *.tmp
 *.temp
 
 dataset2024.zip
+
