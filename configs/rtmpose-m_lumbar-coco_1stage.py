@@ -4,9 +4,13 @@ _base_ = ['mmpose::_base_/default_runtime.py']
 
 # Runtime and optimization. The original RTMPose recipe's second pipeline and
 # PipelineSwitchHook are intentionally omitted, leaving one training stage.
-max_epochs = 420
+
+
+MAX_EPOCHS = 210
+BATCH = 64
+WORKERS = 8
 base_lr = 5e-4
-train_cfg = dict(max_epochs=max_epochs, val_interval=10)
+train_cfg = dict(max_epochs=MAX_EPOCHS, val_interval=10)
 randomness = dict(seed=21)
 
 optim_wrapper = dict(
@@ -21,7 +25,7 @@ param_scheduler = [
         begin=0, end=500),
     dict(
         type='CosineAnnealingLR', eta_min=base_lr * 0.05,
-        begin=max_epochs // 2, end=max_epochs, T_max=max_epochs // 2,
+        begin=MAX_EPOCHS // 2, end=MAX_EPOCHS, T_max=MAX_EPOCHS // 2,
         by_epoch=True, convert_to_iter_based=True),
 ]
 auto_scale_lr = dict(base_batch_size=32)
@@ -122,8 +126,8 @@ val_pipeline = [
 ]
 
 train_dataloader = dict(
-    batch_size=32,
-    num_workers=4,
+    batch_size=BATCH,
+    num_workers=WORKERS,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
     dataset=dict(
@@ -165,26 +169,34 @@ test_dataloader = dict(
         test_mode=True,
         pipeline=val_pipeline))
 
-# PCK is the fraction of landmarks within 5% of the longer bbox side. Both AP
-# and PCK are reported, while the checkpoint hook selects the highest PCK.
+# Different PCK-s with different threshold, normalization item is a BBox.
 val_evaluator = [
     dict(
         type='CocoMetric',
         ann_file=data_root + 'annotations/lumbar_keypoints_val.json'),
-    dict(type='PCKAccuracy', thr=0.05, norm_item='bbox'),
+    dict(type='PCKAccuracy', thr=0.05, norm_item='bbox', prefix='PCK@0.05'),
+    dict(type="PCKAccuracy", thr=0.03, norm_item='bbox', prefix='PCK@0.03'),
+    dict(type="PCKAccuracy", thr=0.02, norm_item='bbox', prefix='PCK@0.02'),
+    dict(type="PCKAccuracy", thr=0.01, norm_item='bbox', prefix='PCK@0.01')
 ]
 test_evaluator = [
     dict(
         type='CocoMetric',
         ann_file=data_root + 'annotations/lumbar_keypoints_test.json'),
-    dict(type='PCKAccuracy', thr=0.05, norm_item='bbox'),
+    dict(type='PCKAccuracy', thr=0.05, norm_item='bbox', prefix='PCK@0.05'),
+    dict(type='PCKAccuracy', thr=0.03, norm_item='bbox', prefix='PCK@0.03'),
+    dict(type='PCKAccuracy', thr=0.02, norm_item='bbox', prefix='PCK@0.02'),
+    dict(type='PCKAccuracy', thr=0.01, norm_item='bbox', prefix='PCK@0.01'),
 ]
 
 default_hooks = dict(
+    # With small datasets this also prints at the end of every epoch. With a
+    # larger dataset it prints every 10 iterations, so progress is visible.
+    logger=dict(type='LoggerHook', interval=10),
     checkpoint=dict(
         type='CheckpointHook',
         interval=10,
-        save_best='PCK',
+        save_best='PCK@0.05/PCK',
         rule='greater',
         max_keep_ckpts=3))
 custom_hooks = [

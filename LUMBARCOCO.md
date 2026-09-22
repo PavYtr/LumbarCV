@@ -1,5 +1,8 @@
 # LumbarCoco / RTMPose-m
 
+Актуальная пошаговая инструкция по обучению, TensorBoard и визуализации
+предсказаний находится в [`RUN_TRAINING.md`](RUN_TRAINING.md).
+
 This project converts the 400 lateral (`LA`) BUU-LSPINE_400 radiographs to a
 22-keypoint COCO dataset and trains a one-stage RTMPose-m model.
 
@@ -80,11 +83,30 @@ conda run --no-capture-output -n mmpose python tools/test.py \
   work_dirs/rtmpose-m_lumbar-coco/best_PCK_epoch_*.pth
 ```
 
+To overlay the ground-truth landmarks and model prediction on one validation
+image, run:
+
+```bash
+conda run --no-capture-output -n mmpose python \
+  tools/visualize_gt_vs_prediction.py \
+  configs/rtmpose-m_lumbar-coco_1stage.py \
+  work_dirs/rtmpose-m_lumbar-coco/best_PCK_epoch_110.pth \
+  --annotations data/LumbarCoco/annotations/lumbar_keypoints_val.json \
+  --show-labels
+```
+
+Without an image argument the script uses the first image from the annotation
+file. To process a specific image, add its path after the checkpoint. The
+generated overlay is written to `output/comparisons/`. Ground-truth landmarks
+are green circles, predictions are magenta crosses, and pale lines connect
+each prediction to its target. The header also reports mean pixel error and
+bbox-normalized PCK@0.05.
+
 The model is RTMPose-m with 22 output channels and `KLDiscretLoss`. AdamW is
 used with learning rate `5e-4` and weight decay `0.05`. There is one pipeline
-for all 420 epochs—no stage-2 pipeline or `PipelineSwitchHook`. Validation
-reports both COCO AP and bbox-normalized PCK@0.05; checkpoints are ranked by
-`PCK`, with the top checkpoint retained in addition to periodic checkpoints.
+for all 210 epochs—no stage-2 pipeline or `PipelineSwitchHook`. Validation
+reports COCO AP and bbox-normalized PCK at thresholds 0.05, 0.03, 0.02 and
+0.01; checkpoints are ranked by `PCK@0.05/PCK`.
 
 Horizontal flip and human-specific half-body augmentation are disabled because
 front/back are anatomical labels and every BUU LA image has the same facing

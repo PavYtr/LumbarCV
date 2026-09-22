@@ -2,7 +2,9 @@
 """Local MMPose 1.x checkpoint evaluation launcher."""
 
 import argparse
+import os
 from pathlib import Path
+os.environ.setdefault('TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD', '1')
 
 from mmengine.config import Config, DictAction
 from mmengine.runner import Runner
