@@ -15,6 +15,7 @@ from visualize_gt_vs_prediction import (
     PRED_COLOR,
     TEXT_COLOR,
     draw_skeleton,
+    draw_tolerance_circles,
     load_coco_sample,
     point,
     predict,
@@ -82,11 +83,13 @@ def draw_panel(
     prediction: bool,
     show_labels: bool,
     show_bbox: bool,
+    tolerance_gt: np.ndarray | None = None,
+    tolerance_radii: np.ndarray | None = None,
 ) -> np.ndarray:
     canvas = image.copy()
     height, width = canvas.shape[:2]
     scale = max(0.8, min(width, height) / 900.0)
-    line_width = max(1, round(2 * scale)) / 3
+    line_width = max(1, round(2 * scale / 3))
     radius = max(3, round(5 * scale))
 
     if show_bbox:
@@ -99,7 +102,6 @@ def draw_panel(
             line_width,
             cv2.LINE_AA,
         )
-
     skeleton_layer = canvas.copy()
     draw_skeleton(
         skeleton_layer,
@@ -110,6 +112,8 @@ def draw_panel(
         line_width + 1,
     )
     cv2.addWeighted(skeleton_layer, 0.85, canvas, 0.15, 0, canvas)
+    if tolerance_gt is not None and tolerance_radii is not None:
+        draw_tolerance_circles(canvas, tolerance_gt, tolerance_radii)
 
     for index, landmark in enumerate(keypoints):
         if not visible[index]:

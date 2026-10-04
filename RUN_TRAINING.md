@@ -53,6 +53,26 @@ conda run --no-capture-output -n mmpose python tools/train.py \
   --amp
 ```
 
+### BUU-LSPINE_2000: обучение с bbox-аугментацией и Local PCK
+
+Текущий конфиг расширяет выбранные стороны bbox на случайную величину от 0 до
+50% его исходной ширины или высоты, обрезая расширение по краям изображения.
+При применении аугментации crop поворачивается на случайный угол от −15° до
++15°. Валидация и test считают только `LocalPCK/segment@0.1/PCK`; по этой же
+метрике сохраняется лучший checkpoint. COCO AP и PCK по bbox в этом конфиге
+не рассчитываются.
+
+```bash
+conda run --no-capture-output -n mmpose python tools/train.py \
+  configs/rtmpose-m_lumbar-coco2000_bbox-localpck.py \
+  --work-dir work_dirs/rtmpose-m-lumbar-coco2000-bbox-localpck \
+  --amp
+```
+
+Используйте тот же конфиг и каталог при возобновлении обучения, добавив
+`--resume`. Для этого конфига валидация и сохранение checkpoint выполняются
+каждые 10 эпох из 210.
+
 ### Малый набор BUU-LSPINE_400
 
 ```bash
@@ -110,6 +130,40 @@ tail -f "$LOG"
 
 `Ctrl+C` здесь завершает только `tail`, но не обучение.
 
+### Сравнение изображения до и после аугментации
+
+Команда сохраняет два входных crop рядом: слева стандартное кадрирование без
+случайной аугментации, справа результат обучающего конвейера. На обоих кадрах
+показаны ключевые точки и связи между ними. Checkpoint и GPU не нужны.
+
+```bash
+conda run --no-capture-output -n mmpose python \
+  tools/visualize_augmentation.py \
+  configs/rtmpose-m_lumbar-coco2000_bbox-localpck.py \
+  --index 0 --seed 42 \
+  --output output/visualizations/augmentation_comparison.jpg
+```
+
+`--index` выбирает пример из обучающего набора, `--seed` позволяет повторить
+тот же случайный результат. Для обычной конфигурации можно указать
+`configs/rtmpose-m_lumbar-coco_1stage.py`. Если точки мешают просмотру,
+добавьте `--hide-keypoints`.
+
+Чтобы получить 20 сравнений во время обучения, запустите:
+
+```bash
+conda run --no-capture-output -n mmpose python tools/train.py \
+  configs/rtmpose-m_lumbar-coco2000_bbox-localpck.py \
+  --work-dir work_dirs/rtmpose-m-lumbar-bbox-vis \
+  --amp --augmentation-samples 20
+```
+
+Снимки появятся в `work_dirs/rtmpose-m-lumbar-bbox-vis/augmentation_comparisons/`
+через равные интервалы обучения. Каждый снимок использует отдельный пример из
+train-набора и отдельную случайную аугментацию; это просмотр обучающего
+конвейера, а не точная копия текущего minibatch. При `--resume` уже сохранённые
+снимки остаются в каталоге, новые создаются на оставшихся контрольных шагах.
+
 ## 3. TensorBoard: графики обучения
 
 Новые запуски записывают одновременно `scalars.json` и TensorBoard event-файл.
@@ -130,6 +184,8 @@ http://127.0.0.1:6006
 В TensorBoard будут доступны loss, accuracy, learning rate, AP и четыре PCK:
 `PCK@0.05`, `PCK@0.03`, `PCK@0.02`, `PCK@0.01`. Важно указывать каталог
 `work_dirs` с буквой `s`, а не `work_dir`.
+При обучении с bbox-аугментацией вместо AP и этих PCK будет записываться
+`LocalPCK/segment@0.1/PCK`.
 
 ## 4. Выбор последней и лучшей модели
 
@@ -180,7 +236,48 @@ conda run --no-capture-output -n mmpose python tools/test.py \
 Команда выводит COCO AP/AR и PCK на test-разбиении. Не передавайте в launcher
 непроверенные `.pth` из сторонних источников.
 
+### Test после обучения с bbox-аугментацией
+
+Из корня проекта найдите лучший checkpoint именно в каталоге нового запуска и
+запустите test на 200 снимках из `data/LumbarCoco2000`:
+
+```bash
+EXPERIMENT_DIR=work_dirs/rtmpose-m-lumbar-coco2000-bbox-localpck
+BEST_CHECKPOINT=$(find "$EXPERIMENT_DIR" -maxdepth 1 \
+  -type f -name 'best_*.pth' -printf '%T@ %p\n' \
+  | sort -nr | head -n1 | cut -d' ' -f2-)
+if test -n "$BEST_CHECKPOINT" && test -f "$BEST_CHECKPOINT"; then
+  conda run --no-capture-output -n mmpose python tools/test.py \
+    configs/rtmpose-m_lumbar-coco2000_bbox-localpck.py \
+    "$BEST_CHECKPOINT" \
+    --work-dir "$EXPERIMENT_DIR/test-best"
+else
+  echo "Лучший checkpoint не найден в $EXPERIMENT_DIR"
+fi
+```
+
+Результат test — `LocalPCK/segment@0.1/PCK`. Для последнего checkpoint вместо
+поиска лучшего используйте `LAST_CHECKPOINT=$(cat "$EXPERIMENT_DIR/last_checkpoint")`
+и передайте `"$LAST_CHECKPOINT"` в ту же команду.
+
 ## 6. Визуализация предсказаний модели
+
+### Визуализация случайных снимков test
+
+```bash
+conda run --no-capture-output -n mmpose python tools/visualize_test_grid.py
+```
+
+Команда использует лучший checkpoint из
+`work_dirs/rtmpose-m-lumbar-coco2000-randombbox-localpck`, сохраняет 10
+отдельных изображений и общий `grid.jpg` с увеличенными областями позвоночника
+в `output/test_visualizations/<checkpoint>/seed_<число>_count_10/`.
+Оранжевые окружности показывают радиус допуска LocalPCK, пурпурные кресты и
+линии — предсказания. При каждом запуске
+выбираются новые снимки; использованный seed печатается в терминале.
+`--seed 42` воспроизведёт подборку, `--count 20` изменит число снимков,
+`--columns 3` — число столбцов в общем изображении, а `--output-dir` задаст
+папку сохранения.
 
 ### Ground truth и prediction на одном изображении
 
@@ -210,6 +307,31 @@ conda run --no-capture-output -n mmpose python \
 ```
 
 Если путь к изображению не передан, используется первое изображение из JSON.
+Для визуализации с LocalPCK используйте отдельные команды:
+
+```bash
+conda run --no-capture-output -n mmpose python \
+  tools/visualize_gt_vs_prediction_local_pck.py \
+  configs/rtmpose-m_lumbar-coco_1stage.py \
+  "$BEST_CHECKPOINT" \
+  --annotations data/LumbarCoco/annotations/lumbar_keypoints_val.json
+
+conda run --no-capture-output -n mmpose python \
+  tools/visualize_gt_and_prediction_side_by_side_local_pck.py \
+  configs/rtmpose-m_lumbar-coco_1stage.py \
+  "$BEST_CHECKPOINT" \
+  --annotations data/LumbarCoco/annotations/lumbar_keypoints_val.json
+```
+
+По умолчанию выводится `LocalPCK/segment@0.05`. Для другого режима или порога
+передайте `--local-pck-mode image_mean` и `--local-pck-thr 0.1`. Метрика
+считается по видимым GT-точкам в валидных сегментах, как при оценке модели;
+`--score-thr` влияет только на отображение предсказанных точек.
+Оранжевые окружности в обоих вариантах показывают допустимый радиус ошибки
+вокруг GT-точки: порог, умноженный на длину её GT-сегмента (или на среднюю
+длину валидных сегментов при `image_mean`). В этих вариантах GT-точки и зелёный
+скелет не рисуются: положение GT задают центры оранжевых окружностей.
+
 Для конкретного снимка передайте его после checkpoint:
 
 ```bash
@@ -265,3 +387,5 @@ output/comparisons/
 
 Конфигурация сохраняет лучший checkpoint по `PCK@0.05/PCK`. Периодические
 checkpoint создаются каждые 10 эпох, одновременно сохраняются не более трёх.
+Для `configs/rtmpose-m_lumbar-coco2000_bbox-localpck.py` рассчитывается только
+`LocalPCK/segment@0.1/PCK`; лучший checkpoint выбирается по этой метрике.

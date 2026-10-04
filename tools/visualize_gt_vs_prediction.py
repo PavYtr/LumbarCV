@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 import cv2
@@ -19,6 +20,7 @@ PRED_COLOR = (255, 80, 230)
 ERROR_COLOR = (210, 210, 210)
 BBOX_COLOR = (60, 180, 255)
 TEXT_COLOR = (245, 245, 245)
+TOLERANCE_COLOR = (0, 180, 255)
 
 
 def parse_args() -> argparse.Namespace:
@@ -139,6 +141,9 @@ def predict(
 ) -> tuple[np.ndarray, np.ndarray]:
     if device == "auto":
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    project_root = str(Path(__file__).resolve().parents[1])
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
 
     # MMPose 1.3/MMEngine call torch.load without weights_only. Since PyTorch
     # 2.6 the default is True, which rejects older MMEngine checkpoints that
@@ -197,6 +202,19 @@ def draw_skeleton(
             )
 
 
+def draw_tolerance_circles(
+    canvas: np.ndarray, gt: np.ndarray, radii: np.ndarray
+) -> None:
+    """Draw GT-centered LocalPCK acceptance regions in image pixels."""
+    thickness = max(2, round(min(canvas.shape[:2]) / 500))
+    for center, radius in zip(gt, radii):
+        if np.isfinite(center).all() and np.isfinite(radius):
+            cv2.circle(
+                canvas, point(center), round(float(radius)),
+                TOLERANCE_COLOR, thickness, cv2.LINE_AA,
+            )
+
+
 def draw_overlay(
     image: np.ndarray,
     gt: np.ndarray,
@@ -208,6 +226,10 @@ def draw_overlay(
     names: list[str],
     skeleton: list[tuple[int, int]],
     show_labels: bool,
+    metrics: str | None = None,
+    tolerance_radii: np.ndarray | None = None,
+    show_banner: bool = True,
+    local_pck_only: bool = False,
 ) -> np.ndarray:
     canvas = image.copy()
     height, width = canvas.shape[:2]
@@ -216,41 +238,45 @@ def draw_overlay(
     radius = max(3, round(5 * scale))
 
     x, y, bbox_width, bbox_height = bbox_xywh
-    cv2.rectangle(
-        canvas,
-        (round(x), round(y)),
-        (round(x + bbox_width), round(y + bbox_height)),
-        BBOX_COLOR,
-        line_width,
-        cv2.LINE_AA,
-    )
-
+    if not local_pck_only:
+        cv2.rectangle(
+            canvas,
+            (round(x), round(y)),
+            (round(x + bbox_width), round(y + bbox_height)),
+            BBOX_COLOR,
+            line_width,
+            cv2.LINE_AA,
+        )
     # Pale connector lines make both the direction and magnitude of each
     # landmark error visible without overpowering the radiograph.
-    for gt_point, pred_point, is_gt_visible, is_pred_visible in zip(
-        gt, pred, gt_visible, pred_visible
-    ):
-        if is_gt_visible and is_pred_visible:
-            cv2.line(
-                canvas,
-                point(gt_point),
-                point(pred_point),
-                ERROR_COLOR,
-                max(1, line_width // 2),
-                cv2.LINE_AA,
-            )
+    if not local_pck_only:
+        for gt_point, pred_point, is_gt_visible, is_pred_visible in zip(
+            gt, pred, gt_visible, pred_visible
+        ):
+            if is_gt_visible and is_pred_visible:
+                cv2.line(
+                    canvas,
+                    point(gt_point),
+                    point(pred_point),
+                    ERROR_COLOR,
+                    max(1, line_width // 2),
+                    cv2.LINE_AA,
+                )
 
     skeleton_layer = canvas.copy()
-    draw_skeleton(
-        skeleton_layer, gt, skeleton, gt_visible, GT_COLOR, line_width + 1
-    )
+    if not local_pck_only:
+        draw_skeleton(
+            skeleton_layer, gt, skeleton, gt_visible, GT_COLOR, line_width + 1
+        )
     draw_skeleton(
         skeleton_layer, pred, skeleton, pred_visible, PRED_COLOR, line_width
     )
     cv2.addWeighted(skeleton_layer, 0.8, canvas, 0.2, 0, canvas)
+    if tolerance_radii is not None:
+        draw_tolerance_circles(canvas, gt, tolerance_radii)
 
     for index, (gt_point, pred_point) in enumerate(zip(gt, pred)):
-        if gt_visible[index]:
+        if gt_visible[index] and not local_pck_only:
             center = point(gt_point)
             cv2.circle(canvas, center, radius + 1, (0, 0, 0), line_width + 2, cv2.LINE_AA)
             cv2.circle(canvas, center, radius, GT_COLOR, line_width, cv2.LINE_AA)
@@ -265,6 +291,14 @@ def draw_overlay(
                     max(1, line_width),
                     cv2.LINE_AA,
                 )
+        elif gt_visible[index] and show_labels and index < len(names):
+            center = point(gt_point)
+            cv2.putText(
+                canvas, names[index],
+                (center[0] + radius + 3, center[1] - radius - 2),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.42 * scale,
+                TOLERANCE_COLOR, max(1, line_width), cv2.LINE_AA,
+            )
         if pred_visible[index]:
             cv2.drawMarker(
                 canvas,
@@ -276,20 +310,34 @@ def draw_overlay(
                 cv2.LINE_AA,
             )
 
-    comparable = gt_visible & pred_visible
-    if np.any(comparable):
-        errors = np.linalg.norm(pred[comparable] - gt[comparable], axis=1)
-        mean_error = float(errors.mean())
-        norm = max(float(bbox_width), float(bbox_height), 1.0)
-        pck = float(np.mean(errors <= 0.05 * norm))
-        metrics = f"Mean error: {mean_error:.1f}px   PCK@0.05: {pck:.3f}"
-    else:
-        metrics = "No comparable keypoints"
+    if metrics is None:
+        comparable = gt_visible & pred_visible
+        if np.any(comparable):
+            errors = np.linalg.norm(pred[comparable] - gt[comparable], axis=1)
+            mean_error = float(errors.mean())
+            norm = max(float(bbox_width), float(bbox_height), 1.0)
+            pck = float(np.mean(errors <= 0.05 * norm))
+            metrics = f"Mean error: {mean_error:.1f}px   PCK@0.05: {pck:.3f}"
+        else:
+            metrics = "No comparable keypoints"
+
+    if not show_banner:
+        return canvas
 
     legend = (
         f"GT: green circles   Prediction: magenta crosses   "
         f"visible predictions: {int(pred_visible.sum())}/{len(scores)}"
     )
+    if local_pck_only:
+        legend = (
+            f"LocalPCK radius: orange   Prediction: magenta   "
+            f"visible: {int(pred_visible.sum())}/{len(scores)}"
+        )
+    elif tolerance_radii is not None:
+        legend = (
+            f"GT: green   Pred: magenta   LocalPCK radius: orange   "
+            f"visible: {int(pred_visible.sum())}/{len(scores)}"
+        )
     font_scale = max(0.45, 0.65 * scale)
     row_height = max(25, round(31 * scale))
     banner_height = row_height * 2 + 8
