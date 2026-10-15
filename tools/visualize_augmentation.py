@@ -21,8 +21,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "config", nargs="?", type=Path,
-        default=Path("configs/rtmpose-m_lumbar-coco2000_bbox-localpck.py"),
-        help="training config (default: bbox augmentation config)",
+        default=Path("configs/rtmpose-m_lumbar-coco2000_vertebrae-crop.py"),
+        help="training config (default: empirical vertebrae crop config)",
     )
     parser.add_argument("--index", type=int, default=0, help="train sample index")
     parser.add_argument("--seed", type=int, default=42, help="random seed")

@@ -26,6 +26,13 @@ def main():
         Path('work_dirs') / f'{Path(args.config).stem}_test')
     if args.cfg_options:
         cfg.merge_from_dict(args.cfg_options)
+
+    # Training snapshots can include the optional preview hook. Runner builds
+    # every configured hook even for test(), so register it before construction.
+    if any(hook.get('type') == 'AugmentationComparisonHook'
+           for hook in cfg.get('custom_hooks', []) if isinstance(hook, dict)):
+        import tools.augmentation_hook  # noqa: F401; registers the hook
+
     Runner.from_cfg(cfg).test()
 
 
