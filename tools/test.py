@@ -9,6 +9,7 @@ os.environ.setdefault('TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD', '1')
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from mmengine.config import Config, DictAction
+from mmengine.evaluator import DumpResults
 from mmengine.runner import Runner
 
 
@@ -17,6 +18,9 @@ def main():
     parser.add_argument('config')
     parser.add_argument('checkpoint')
     parser.add_argument('--work-dir')
+    parser.add_argument('--show-dir', help='Directory for test visualizations')
+    parser.add_argument(
+        '--out', help='Prediction .pkl/.pickle file or output directory')
     parser.add_argument('--cfg-options', nargs='+', action=DictAction)
     args = parser.parse_args()
 
@@ -27,13 +31,32 @@ def main():
     if args.cfg_options:
         cfg.merge_from_dict(args.cfg_options)
 
+    if args.show_dir:
+        hooks = cfg.setdefault('default_hooks', {})
+        visualization = hooks.setdefault(
+            'visualization', dict(type='PoseVisualizationHook'))
+        visualization.update(
+            enable=True, show=False,
+            out_dir=str(Path(args.show_dir).expanduser().resolve()))
+
+    output_path = None
+    if args.out:
+        output_path = Path(args.out).expanduser()
+        if output_path.suffix.lower() not in ('.pkl', '.pickle'):
+            output_path = output_path / 'predictions.pkl'
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
     # Training snapshots can include the optional preview hook. Runner builds
     # every configured hook even for test(), so register it before construction.
     if any(hook.get('type') == 'AugmentationComparisonHook'
            for hook in cfg.get('custom_hooks', []) if isinstance(hook, dict)):
         import tools.augmentation_hook  # noqa: F401; registers the hook
 
-    Runner.from_cfg(cfg).test()
+    runner = Runner.from_cfg(cfg)
+    if output_path is not None:
+        runner.test_evaluator.metrics.append(
+            DumpResults(out_file_path=str(output_path)))
+    runner.test()
 
 
 if __name__ == '__main__':

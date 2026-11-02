@@ -1,5 +1,26 @@
 # Запуск обучения и визуализаций RTMPose-m / LumbarCoco
 
+## VertebraeShift + VertebraeCrop с bbox полного снимка
+
+Конфиг `configs/rtmpose-m_lumbar-coco2000_vertebrae-shift-crop.py` самостоятельный:
+без `_base_`, с моделью, runtime и metainfo внутри файла. Настройки:
+RTMPose-m, 210 эпох, batch size 64, seed 21 и Local PCK.
+В обучении после загрузки применяется `RandomVertebraeShift` (`prob=0.5`,
+`max_shift_ratio=1.25`), затем `FullImageBBox` задаёт bbox
+`[0, 0, width, height]`. После `GetBBoxCenterScale` с padding 1.0
+`RandomVertebraeCrop` (`apply_prob=0.8`) рассчитывает кроп по уже сдвинутым
+точкам и статистике `reports/vertebrae_statistics_train.json`.
+Когда кроп пропущен, используется весь снимок. Валидация и тест всегда
+используют полный снимок без случайных аугментаций.
+
+Запуск из корня проекта:
+
+```bash
+conda run --no-capture-output -n mmpose python tools/train.py \
+  configs/rtmpose-m_lumbar-coco2000_vertebrae-shift-crop.py \
+  --work-dir work_dirs/rtmpose-m-lumbar-coco2000-vertebrae-shift-crop --amp
+```
+
 
 ## Парный эксперимент: полный снимок и эмпирический RandomVertebraeCrop
 
@@ -406,6 +427,11 @@ conda run --no-capture-output -n mmpose python tools/visualize_test_grid.py
 `--seed 42` воспроизведёт подборку, `--count 20` изменит число снимков,
 `--columns 3` — число столбцов в общем изображении, а `--output-dir` задаст
 папку сохранения.
+
+Добавьте `--side-by-side`, чтобы каждая ячейка сетки содержала пару:
+слева GT, справа предсказание с окружностями допуска LocalPCK. Отдельные
+пары сохраняются как `*_comparison.jpg`, общий файл — `grid.jpg`.
+В этом режиме `--columns` задаёт число пар в строке.
 
 ### Ground truth и prediction на одном изображении
 

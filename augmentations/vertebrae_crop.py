@@ -122,6 +122,9 @@ class RandomVertebraeCrop(BaseTransform):
     or mutate source keypoints. TopdownAffine performs the sole image warp,
     with black padding and the same transform for keypoints. Its aspect-ratio
     correction only expands this crop, preserving all labelled points.
+    For visibility with extra channels, only the first channel selects labels.
+    A numerical margin is retained even if safety_margin_px is zero, keeping
+    extreme points off the exclusive output boundaries after float32 rounding.
     """
 
     def __init__(self, statistics_file=None, expansion_ranges=None,
@@ -168,7 +171,9 @@ class RandomVertebraeCrop(BaseTransform):
         if np.random.random() >= self.apply_prob:
             return results
         points = np.asarray(results['keypoints'])[0, :, :2]
-        visible = np.asarray(results['keypoints_visible'])[0].reshape(-1)
+        visible = np.asarray(results['keypoints_visible'])[0]
+        if visible.ndim > 1:
+            visible = visible[:, 0]
         source_angle = spine_angle(points, visible)
         sampled_angle = float(np.random.uniform(*self.rotation_range))
         sampled_margins = {side: float(np.random.uniform(*self.expansion_ranges[side]))
@@ -181,7 +186,11 @@ class RandomVertebraeCrop(BaseTransform):
         vertical_points = points[visible > 0].astype(np.float64) @ rotation(source_angle).T
         extent = np.ptp(vertical_points, axis=0)
         margins = np.array([sampled_margins[s] for s in SIDES])
-        margins = margins * extent[[0, 0, 1, 1]] + self.safety_margin_px
+        # TopdownAffine constructs its warp in float32. A strictly positive
+        # floor also prevents max points mapping exactly to output width/height
+        # when callers request zero expansion and zero safety margin.
+        numerical_margin = max(1e-3, np.abs(q).max() * np.finfo(np.float32).eps * 8)
+        margins = margins * extent[[0, 0, 1, 1]] + max(self.safety_margin_px, numerical_margin)
         low -= margins[[0, 2]]
         high += margins[[1, 3]]
         results['bbox_center'] = (((low + high) / 2) @ r)[None].astype(np.float32)

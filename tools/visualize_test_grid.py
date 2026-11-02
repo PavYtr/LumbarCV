@@ -21,7 +21,10 @@ import torch
 from mmpose.apis import inference_topdown, init_model
 
 from local_pck_visualization import local_pck, local_pck_radii, metric_label
-from visualize_gt_vs_prediction import as_numpy, draw_overlay, load_coco_sample
+from visualize_gt_and_prediction_side_by_side import draw_panel
+from visualize_gt_vs_prediction import (
+    GT_COLOR, PRED_COLOR, as_numpy, draw_overlay, load_coco_sample,
+)
 
 
 DEFAULT_RUN = ROOT / "work_dirs/rtmpose-m-lumbar-coco2000-randombbox-localpck"
@@ -48,6 +51,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--local-pck-thr", type=float, default=0.1)
     parser.add_argument("--columns", type=int, default=2,
                         help="number of columns in grid.jpg (default: 2)")
+    parser.add_argument("--side-by-side", action="store_true",
+                        help="compare ground truth (left) and predictions (right) for each image")
     return parser.parse_args()
 
 
@@ -144,15 +149,35 @@ def main() -> None:
         path = output_dir / f"{index:02d}_{image_path.stem}_overlay.jpg"
         if not cv2.imwrite(str(path), overlay):
             raise OSError(f"could not write {path}")
-        grid_overlay = draw_overlay(
-            image, gt, visible, pred, scores >= args.score_thr, scores,
-            annotation["bbox"], names, skeleton, False,
-            metrics=label, tolerance_radii=radii, show_banner=False,
-            local_pck_only=True,
-        )
-        tiles.append(make_grid_tile(
-            grid_overlay, annotation["bbox"], f"{index:02d}  {image_path.stem}", label
-        ))
+        if args.side_by_side:
+            gt_panel = draw_panel(
+                image, gt, visible, names, skeleton, annotation["bbox"],
+                GT_COLOR, prediction=False, show_labels=False, show_bbox=False)
+            pred_panel = draw_panel(
+                image, pred, scores >= args.score_thr, names, skeleton,
+                annotation["bbox"], PRED_COLOR,
+                prediction=True, show_labels=False, show_bbox=False,
+                tolerance_gt=gt, tolerance_radii=radii)
+            tile = np.hstack((
+                make_grid_tile(gt_panel, annotation["bbox"],
+                               f"{index:02d}  {image_path.stem}", "GROUND TRUTH"),
+                make_grid_tile(pred_panel, annotation["bbox"],
+                               "MODEL PREDICTION", label),
+            ))
+            comparison_path = output_dir / f"{index:02d}_{image_path.stem}_comparison.jpg"
+            if not cv2.imwrite(str(comparison_path), tile):
+                raise OSError(f"could not write {comparison_path}")
+            tiles.append(tile)
+        else:
+            grid_overlay = draw_overlay(
+                image, gt, visible, pred, scores >= args.score_thr, scores,
+                annotation["bbox"], names, skeleton, False,
+                metrics=label, tolerance_radii=radii, show_banner=False,
+                local_pck_only=True,
+            )
+            tiles.append(make_grid_tile(
+                grid_overlay, annotation["bbox"], f"{index:02d}  {image_path.stem}", label
+            ))
         print(f"Saved {index}/{args.count}: {path}", flush=True)
     blank = np.full_like(tiles[0], 20)
     rows = [

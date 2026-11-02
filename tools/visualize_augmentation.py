@@ -47,9 +47,10 @@ def pipelines(config: Config) -> tuple[Compose, Compose]:
     end = types.index("TopdownAffine")
     if start >= end:
         raise ValueError("GetBBoxCenterScale must precede TopdownAffine")
-    # The left panel uses the same image loading, bbox padding and affine crop.
-    # The right panel also includes every training augmentation between them.
-    baseline = [*pipeline[:start + 1], pipeline[end]]
+    # The left panel keeps image loading, bbox padding and affine crop, but
+    # excludes the pixel shift that must run before bbox/crop calculation.
+    baseline = [step for step in pipeline[:start + 1]
+                if step.get("type") != "RandomVertebraeShift"] + [pipeline[end]]
     augmented = pipeline[:end + 1]
     return Compose(baseline), Compose(augmented)
 
