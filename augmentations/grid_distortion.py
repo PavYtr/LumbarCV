@@ -1,6 +1,7 @@
 """Albumentations GridDistortion for 22-point lumbar MMPose samples."""
 
 import inspect
+import warnings
 
 import cv2
 import numpy as np
@@ -21,6 +22,8 @@ class LumbarGridDistortion(BaseTransform):
     preserved. Points are never removed or reordered. Unlabelled out-of-frame
     placeholders are retained; invalid labelled inputs fail explicitly.
     A full-canvas xyxy bbox stays unchanged because the canvas size is fixed.
+    Mask remapping retries up to three random grids if a landmark is lost,
+    then warns and leaves the original sample unchanged.
 
     ``distort_range`` maps to ``distort_limit`` in Albumentations 2.0.8.
     Older APIs without the requested keypoint remapping support are rejected
@@ -85,13 +88,28 @@ class LumbarGridDistortion(BaseTransform):
         # Do not send out-of-frame unlabelled placeholders to inverse lookup.
         # Keep all 22 entries and restore those placeholders afterwards.
         xy[~inside] = 0
-        self.augmentation.set_random_seed(int(np.random.randint(0, 2**32)))
-        output = self.augmentation(
-            image=results['img'], keypoints=xy, point_ids=np.arange(22))
-        ids = np.asarray(output['point_ids'], dtype=int)
-        warped = np.asarray(output['keypoints'], dtype=points.dtype)
-        if (warped.shape != (22, 2) or not np.isfinite(warped).all() or
-                not np.array_equal(np.sort(ids), np.arange(22))):
+        # A small rasterized landmark can disappear during mask remapping.
+        # Retry mask grids rather than dropping labels or using slow direct maps.
+        mask_remapping = (
+            self.augmentation.transforms[0].keypoint_remapping_method == 'mask')
+        attempts = 3 if mask_remapping else 1
+        for _ in range(attempts):
+            self.augmentation.set_random_seed(int(np.random.randint(0, 2**32)))
+            output = self.augmentation(
+                image=results['img'], keypoints=xy, point_ids=np.arange(22))
+            ids = np.asarray(output['point_ids'], dtype=int)
+            warped = np.asarray(output['keypoints'], dtype=points.dtype)
+            valid = (warped.shape == (22, 2) and np.isfinite(warped).all() and
+                     np.array_equal(np.sort(ids), np.arange(22)))
+            if valid:
+                break
+        else:
+            if attempts > 1:
+                warnings.warn(
+                    'GridDistortion mask remapping lost landmarks in 3 attempts; '
+                    'keeping the original image and landmarks.', RuntimeWarning,
+                    stacklevel=2)
+                return results
             raise RuntimeError('GridDistortion lost landmarks or returned invalid coordinates')
         updated = points.copy()
         updated[0, ids, :2] = warped
