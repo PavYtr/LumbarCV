@@ -1,0 +1,190 @@
+{
+  "processed_images": 2000,
+  "all_shifts": {
+    "total_count": 10000,
+    "valid_count": 10000,
+    "invalid_count": 0,
+    "minimum": 0.0,
+    "maximum": 0.43991083636117845,
+    "mean": 0.07763580531645994,
+    "median": 0.07276357478813114,
+    "std": 0.04788832823974402
+  },
+  "max_shift": {
+    "total_count": 2000,
+    "valid_count": 2000,
+    "invalid_count": 0,
+    "minimum": 0.01906733556123422,
+    "maximum": 0.43991083636117845,
+    "mean": 0.13210087157754916,
+    "median": 0.12702899595639394,
+    "std": 0.04618186560452312,
+    "percentiles": {
+      "50": {
+        "value": 0.12702899595639394,
+        "images_above": 1000
+      },
+      "75": {
+        "value": 0.15500980692663646,
+        "images_above": 500
+      },
+      "80": {
+        "value": 0.1634001060447454,
+        "images_above": 400
+      },
+      "90": {
+        "value": 0.18785863036523756,
+        "images_above": 200
+      },
+      "95": {
+        "value": 0.21447527394099244,
+        "images_above": 100
+      },
+      "99": {
+        "value": 0.2793378340320057,
+        "images_above": 20
+      }
+    }
+  },
+  "by_level": {
+    "L1_L2": {
+      "total_count": 2000,
+      "valid_count": 2000,
+      "invalid_count": 0,
+      "minimum": 0.0,
+      "maximum": 0.21007666266578745,
+      "mean": 0.05537466731771345,
+      "median": 0.05201671457716779,
+      "std": 0.03249583318024842
+    },
+    "L2_L3": {
+      "total_count": 2000,
+      "valid_count": 2000,
+      "invalid_count": 0,
+      "minimum": 0.0,
+      "maximum": 0.29448543628170437,
+      "mean": 0.07488957072226904,
+      "median": 0.07277794492603828,
+      "std": 0.038640635707351545
+    },
+    "L3_L4": {
+      "total_count": 2000,
+      "valid_count": 2000,
+      "invalid_count": 0,
+      "minimum": 0.0,
+      "maximum": 0.280743448163555,
+      "mean": 0.08091007710955188,
+      "median": 0.08088850987565908,
+      "std": 0.042797735068131344
+    },
+    "L4_L5": {
+      "total_count": 2000,
+      "valid_count": 2000,
+      "invalid_count": 0,
+      "minimum": 0.0,
+      "maximum": 0.35607671260927237,
+      "mean": 0.08668095250874973,
+      "median": 0.08312913384852996,
+      "std": 0.05090923540271453
+    },
+    "L5_S1": {
+      "total_count": 2000,
+      "valid_count": 2000,
+      "invalid_count": 0,
+      "minimum": 0.0,
+      "maximum": 0.43991083636117845,
+      "mean": 0.0903237589240156,
+      "median": 0.0834058676400901,
+      "std": 0.061133999133798696
+    }
+  },
+  "invalid_reasons": {},
+  "invalid_measurements": [],
+  "input_audit": {
+    "sources": [
+      {
+        "path": "/home/PavYtr/Projects/cv/data/LumbarCoco2000/annotations/lumbar_keypoints_test.json",
+        "sha256": "475cb27d2e8647bdd9e9916cf795172d96fb0deb3498a02fabc5239daaab19ac",
+        "images": 200,
+        "annotations": 200
+      },
+      {
+        "path": "/home/PavYtr/Projects/cv/data/LumbarCoco2000/annotations/lumbar_keypoints_train.json",
+        "sha256": "1375dcd7b901e5eef28bef0abebb85b320bbac30c1fe3e170f5ecc706ae7185e",
+        "images": 1600,
+        "annotations": 1600
+      },
+      {
+        "path": "/home/PavYtr/Projects/cv/data/LumbarCoco2000/annotations/lumbar_keypoints_val.json",
+        "sha256": "1d190515e3d25ebdfd9f2206a36cb8dc3d87d3977073502949d3df3118fa7dc3",
+        "images": 200,
+        "annotations": 200
+      }
+    ],
+    "duplicate_image_records": 0,
+    "duplicate_annotation_records": 0,
+    "images_with_multiple_distinct_annotations": 0
+  },
+  "definition": "C1=max(0, lower_right-upper_right, upper_left-lower_left); C2=lower_right-lower_left; S=C1/C2 in lower top-endplate axis",
+  "visibility_policy": "Only COCO v=2 is accepted; v=0 and v=1 are invalid",
+  "std_ddof": 0,
+  "percentile_method": "linear",
+  "threshold_comparison": "strictly greater",
+  "keypoint_names": [
+    "L1TF",
+    "L1TB",
+    "L1BF",
+    "L1BB",
+    "L2TF",
+    "L2TB",
+    "L2BF",
+    "L2BB",
+    "L3TF",
+    "L3TB",
+    "L3BF",
+    "L3BB",
+    "L4TF",
+    "L4TB",
+    "L4BF",
+    "L4BB",
+    "L5TF",
+    "L5TB",
+    "L5BF",
+    "L5BB",
+    "S1TF",
+    "S1TB"
+  ],
+  "pair_indices": {
+    "L1_L2": [
+      2,
+      3,
+      4,
+      5
+    ],
+    "L2_L3": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "L3_L4": [
+      10,
+      11,
+      12,
+      13
+    ],
+    "L4_L5": [
+      14,
+      15,
+      16,
+      17
+    ],
+    "L5_S1": [
+      18,
+      19,
+      20,
+      21
+    ]
+  },
+  "json_missing_values": "null (CSV uses NaN)"
+}
