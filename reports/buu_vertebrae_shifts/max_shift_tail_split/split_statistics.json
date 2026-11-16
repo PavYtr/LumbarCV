@@ -1,0 +1,130 @@
+{
+  "seed": 42,
+  "dataset": "/home/PavYtr/Projects/cv/data/LumbarCoco2000MaxShiftTails",
+  "images_dir": "/home/PavYtr/Projects/cv/BUU-LSPINE_2000/LA",
+  "processed_images": 2000,
+  "selection": "Sort by (signed max_shift, image_id, image_name); first 5% and last 5% to test; shuffle middle 90% with random.Random(seed), then divide train:val=8:1",
+  "metric": "Algebraic maximum of five signed posterior-corner shifts per image",
+  "log_scale": "Y image counts only; X signed max_shift; selection uses raw ranks",
+  "images_per_tail": 100,
+  "boundaries": {
+    "lower_test_max": -0.05190745114904886,
+    "middle_min": -0.05164066762757415,
+    "middle_max": 0.15382196050444089,
+    "upper_test_min": 0.15568384163274795
+  },
+  "interpolated_percentiles": {
+    "5": -0.05165400680364788,
+    "95": 0.15391505456085616
+  },
+  "counts": {
+    "train": 1600,
+    "val": 200,
+    "test": 200
+  },
+  "max_shift_statistics": {
+    "train": {
+      "total_count": 1600,
+      "valid_count": 1600,
+      "invalid_count": 0,
+      "minimum": -0.05164066762757415,
+      "maximum": 0.15382196050444089,
+      "mean": 0.011999056756774729,
+      "median": 0.003171528488435202,
+      "std": 0.043116106530152076,
+      "negative_count": 756,
+      "zero_count": 0,
+      "positive_count": 844
+    },
+    "val": {
+      "total_count": 200,
+      "valid_count": 200,
+      "invalid_count": 0,
+      "minimum": -0.05052726853502305,
+      "maximum": 0.1534667467317766,
+      "mean": 0.017153521902819147,
+      "median": 0.005719144983619386,
+      "std": 0.048418792726916744,
+      "negative_count": 90,
+      "zero_count": 0,
+      "positive_count": 110
+    },
+    "test": {
+      "total_count": 200,
+      "valid_count": 200,
+      "invalid_count": 0,
+      "minimum": -0.11208967407259933,
+      "maximum": 0.4399108363611784,
+      "mean": 0.07908699455342888,
+      "median": 0.05188819524184955,
+      "std": 0.15125040525439762,
+      "negative_count": 100,
+      "zero_count": 0,
+      "positive_count": 100
+    }
+  },
+  "tail_statistics": {
+    "lower": {
+      "total_count": 100,
+      "valid_count": 100,
+      "invalid_count": 0,
+      "minimum": -0.11208967407259933,
+      "maximum": -0.05190745114904886,
+      "mean": -0.06528694273663738,
+      "median": -0.06228005846934393,
+      "std": 0.011261073170859543,
+      "negative_count": 100,
+      "zero_count": 0,
+      "positive_count": 0
+    },
+    "upper": {
+      "total_count": 100,
+      "valid_count": 100,
+      "invalid_count": 0,
+      "minimum": 0.15568384163274795,
+      "maximum": 0.4399108363611784,
+      "mean": 0.2234609318434951,
+      "median": 0.20869001193272835,
+      "std": 0.0627605837529226,
+      "negative_count": 0,
+      "zero_count": 0,
+      "positive_count": 100
+    }
+  },
+  "input_audit": {
+    "sources": [
+      {
+        "path": "/home/PavYtr/Projects/cv/data/LumbarCoco2000/annotations/lumbar_keypoints_test.json",
+        "sha256": "475cb27d2e8647bdd9e9916cf795172d96fb0deb3498a02fabc5239daaab19ac",
+        "images": 200,
+        "annotations": 200
+      },
+      {
+        "path": "/home/PavYtr/Projects/cv/data/LumbarCoco2000/annotations/lumbar_keypoints_train.json",
+        "sha256": "1375dcd7b901e5eef28bef0abebb85b320bbac30c1fe3e170f5ecc706ae7185e",
+        "images": 1600,
+        "annotations": 1600
+      },
+      {
+        "path": "/home/PavYtr/Projects/cv/data/LumbarCoco2000/annotations/lumbar_keypoints_val.json",
+        "sha256": "1d190515e3d25ebdfd9f2206a36cb8dc3d87d3977073502949d3df3118fa7dc3",
+        "images": 200,
+        "annotations": 200
+      }
+    ],
+    "duplicate_image_records": 0,
+    "duplicate_annotation_records": 0,
+    "images_with_multiple_distinct_annotations": 0
+  },
+  "output_annotations_sha256": {
+    "train": "d7e67c41d37b2436cd14f113dad9b2eec88a591446ee86142de9dfa8e96c4de5",
+    "val": "29a33baa954e51c1d340f4172b998d83a9a4303ef5e4afecd637041fb5e7ea2e",
+    "test": "f8137d9357c3c443b18f8dc5a2734d735fdc6ddd6fc62428461cf39ea06fa423"
+  },
+  "validation": {
+    "unique_images": true,
+    "complete_coverage": true,
+    "disjoint_splits": true,
+    "original_image_and_annotation_records_preserved": true
+  }
+}

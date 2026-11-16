@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Analyze original BUU COCO landmarks, independently of the training pipeline.
+"""Analyze signed posterior-corner shifts in original BUU COCO landmarks.
+
+S = dot(B - P, u) / |B - A|, where P is the upper vertebra's lower
+posterior corner, A/B are the lower vertebra's upper anterior/posterior
+corners, and u = (B - A) / |B - A|. Positive means anterior displacement.
 
 --annotations accepts JSON files and/or directories (all *.json recursively).
 Repeated images are merged by file_name, with IDs and dimensions checked.
@@ -24,7 +28,7 @@ from configs._base_.datasets.lumbar_coco import KEYPOINT_NAMES
 LEVELS = ('L1_L2', 'L2_L3', 'L3_L4', 'L4_L5', 'L5_S1')
 PAIR_INDICES = tuple(
     tuple(KEYPOINT_NAMES.index(name) for name in (
-        f'L{level}BF', f'L{level}BB',
+        f'L{level}BB',
         f'L{level + 1}TF' if level < 5 else 'S1TF',
         f'L{level + 1}TB' if level < 5 else 'S1TB'))
     for level in range(1, 6)
@@ -32,38 +36,30 @@ PAIR_INDICES = tuple(
 PERCENTILES = (50, 75, 80, 90, 95, 99)
 
 
-def relative_shift(upper, lower):
-    """C1/C2 for two (2, 2) endplates; raise ValueError if undefined.
+def relative_shift(posterior_point, lower):
+    """Signed posterior-corner shift divided by the lower top-plate length.
 
-    Sorting projected endpoints makes the result invariant to endpoint order,
-    rotation and reflection. Subtract the lower origin for numerical stability.
-    No center-distance approximation and no clipping of ratios above one.
+    posterior_point is P with shape (2,); lower is [A, B] with shape (2, 2).
+    A is anatomical anterior, B is posterior: never sort endpoints by image x.
+    P is projected onto the infinite line AB, without clipping to the segment.
+    Positive = upper corner anterior to B, negative = posterior to B.
+    Rigid rotations/reflections and uniform scaling preserve the signed ratio.
     """
-    upper, lower = np.asarray(upper, dtype=float), np.asarray(lower, dtype=float)
-    if upper.shape != (2, 2) or lower.shape != (2, 2):
-        raise ValueError('invalid_plate_shape')
-    if not np.isfinite(upper).all() or not np.isfinite(lower).all():
+    posterior_point = np.asarray(posterior_point, dtype=float)
+    lower = np.asarray(lower, dtype=float)
+    if posterior_point.shape != (2,) or lower.shape != (2, 2):
+        raise ValueError('invalid_geometry_shape')
+    if not np.isfinite(posterior_point).all() or not np.isfinite(lower).all():
         raise ValueError('nonfinite_coordinate')
     with np.errstate(over='ignore', invalid='ignore', divide='ignore'):
-        # Choose the lower endpoint at image-left (y breaks vertical ties).
-        lower = lower[np.lexsort((lower[:, 1], lower[:, 0]))]
         delta = lower[1] - lower[0]
         length = np.hypot(*delta)
         if not np.isfinite(length):
             raise ValueError('nonfinite_plate_length')
         if length <= 0:
             raise ValueError('zero_lower_plate_length')
-        upper_length = np.hypot(*(upper[1] - upper[0]))
-        if not np.isfinite(upper_length):
-            raise ValueError('nonfinite_plate_length')
-        if upper_length <= 0:
-            raise ValueError('zero_upper_plate_length')
         u = delta / length
-        upper_left, upper_right = np.sort((upper - lower[0]) @ u)
-        lower_left, lower_right = np.sort((lower - lower[0]) @ u)
-        if not np.isfinite([upper_left, upper_right, lower_left, lower_right]).all():
-            raise ValueError('nonfinite_projection')
-        result = max(0., lower_right - upper_right, upper_left - lower_left) / length
+        result = np.dot(lower[1] - posterior_point, u) / length
     if not np.isfinite(result):
         raise ValueError('nonfinite_shift')
     return float(result)
@@ -151,7 +147,7 @@ def measure_pair(annotation, image, indices):
         if np.any(point[:2] < 0) or np.any(point[:2] >= bounds):
             raise ValueError('coordinate_outside_image')
         points.append(point[:2])
-    return relative_shift(points[:2], points[2:])
+    return relative_shift(points[0], points[1:])
 
 
 def analyze(images):
@@ -186,7 +182,10 @@ def summarize(values):
                 maximum=float(valid.max()) if len(valid) else None,
                 mean=float(valid.mean()) if len(valid) else None,
                 median=float(np.median(valid)) if len(valid) else None,
-                std=float(valid.std(ddof=0)) if len(valid) else None)
+                std=float(valid.std(ddof=0)) if len(valid) else None,
+                negative_count=int(np.count_nonzero(valid < 0)),
+                zero_count=int(np.count_nonzero(valid == 0)),
+                positive_count=int(np.count_nonzero(valid > 0)))
 
 
 def statistics(rows, issues, audit):
@@ -204,13 +203,30 @@ def statistics(rows, issues, audit):
         by_level={level: summarize([row[level] for row in rows]) for level in LEVELS},
         invalid_reasons=dict(Counter(issue['reason'] for issue in issues)),
         invalid_measurements=issues, input_audit=audit,
-        definition='C1=max(0, lower_right-upper_right, upper_left-lower_left); '
-                   'C2=lower_right-lower_left; S=C1/C2 in lower top-endplate axis',
+        schema_version=2,
+        definition='P=upper lower-posterior corner; A=lower upper-anterior corner; '
+                   'B=lower upper-posterior corner; u=(B-A)/|B-A|; '
+                   'Q=A+dot(P-A,u)*u on infinite line AB; S=dot(B-P,u)/|B-A|',
+        sign_convention='positive: upper posterior corner displaced anterior to B; '
+                        'negative: posterior to B; zero: aligned posterior projections',
+        max_shift_definition='algebraic maximum of valid signed shifts, not maximum absolute '
+                             'shift; can be negative when all five shifts are negative',
         visibility_policy='Only COCO v=2 is accepted; v=0 and v=1 are invalid',
         std_ddof=0, percentile_method='linear', threshold_comparison='strictly greater',
         keypoint_names=KEYPOINT_NAMES,
         pair_indices={level: list(indices) for level, indices in zip(LEVELS, PAIR_INDICES)},
         json_missing_values='null (CSV uses NaN)')
+
+
+def histogram_edges(values, bins):
+    """Common edges covering all valid signed values and zero, including empty input."""
+    values = np.asarray(values, dtype=float)
+    valid = values[np.isfinite(values)]
+    low = min(0., float(valid.min())) if len(valid) else 0.
+    high = max(0., float(valid.max())) if len(valid) else 0.
+    if low == high:
+        low, high = -.01, .01
+    return np.linspace(low, high, bins + 1)
 
 
 def plot_histograms(rows, stats, output, bins):
@@ -220,14 +236,15 @@ def plot_histograms(rows, stats, output, bins):
 
     all_values = np.array([row[level] for row in rows for level in LEVELS])
     all_values = all_values[np.isfinite(all_values)]
-    edges = np.linspace(0, max(float(all_values.max()) if len(all_values) else 0, .01), bins + 1)
+    edges = histogram_edges(all_values, bins)
 
     def draw(ax, values, title):
         values = np.asarray(values)
         values = values[np.isfinite(values)]
         ax.hist(values, bins=edges, color='steelblue', edgecolor='white')
-        ax.set(title=f'{title} (n={len(values)})', xlabel='Relative protrusion S = C1 / C2',
+        ax.set(title=f'{title} (n={len(values)})', xlabel='Signed relative shift S (+ anterior, - posterior)',
                ylabel='Count')
+        ax.axvline(0, color='black', linewidth=1, alpha=.6)
         ax.grid(axis='y', alpha=.3)
         ax.set_axisbelow(True)
 
@@ -284,7 +301,8 @@ def main():
         parser.error('output would overwrite input annotations')
     output.mkdir(parents=True, exist_ok=True)
     with (output / 'vertebrae_shifts.csv').open('w', newline='', encoding='utf-8') as stream:
-        writer = csv.DictWriter(stream, fieldnames=['image_id', 'image_name', *LEVELS, 'max_shift'])
+        writer = csv.DictWriter(stream, fieldnames=['image_id', 'image_name', *LEVELS, 'max_shift'],
+                                lineterminator='\n')
         writer.writeheader()
         for row in rows:
             writer.writerow({k: 'NaN' if isinstance(v, float) and np.isnan(v) else v

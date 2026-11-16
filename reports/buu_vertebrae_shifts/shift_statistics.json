@@ -4,44 +4,50 @@
     "total_count": 10000,
     "valid_count": 10000,
     "invalid_count": 0,
-    "minimum": 0.0,
-    "maximum": 0.43991083636117845,
-    "mean": 0.07763580531645994,
-    "median": 0.07276357478813114,
-    "std": 0.04788832823974402
+    "minimum": -0.3884936369592749,
+    "maximum": 0.4399108363611784,
+    "mean": -0.045940565638891505,
+    "median": -0.05045580867882031,
+    "std": 0.05808544444500015,
+    "negative_count": 8484,
+    "zero_count": 0,
+    "positive_count": 1516
   },
   "max_shift": {
     "total_count": 2000,
     "valid_count": 2000,
     "invalid_count": 0,
-    "minimum": 0.01906733556123422,
-    "maximum": 0.43991083636117845,
-    "mean": 0.13210087157754916,
-    "median": 0.12702899595639394,
-    "std": 0.04618186560452312,
+    "minimum": -0.11208967407259933,
+    "maximum": 0.4399108363611784,
+    "mean": 0.019223297051044586,
+    "median": 0.0033680671070167884,
+    "std": 0.06640671438022139,
+    "negative_count": 946,
+    "zero_count": 0,
+    "positive_count": 1054,
     "percentiles": {
       "50": {
-        "value": 0.12702899595639394,
+        "value": 0.0033680671070167884,
         "images_above": 1000
       },
       "75": {
-        "value": 0.15500980692663646,
+        "value": 0.037760373575114276,
         "images_above": 500
       },
       "80": {
-        "value": 0.1634001060447454,
+        "value": 0.05061086952914353,
         "images_above": 400
       },
       "90": {
-        "value": 0.18785863036523756,
+        "value": 0.10136935715589608,
         "images_above": 200
       },
       "95": {
-        "value": 0.21447527394099244,
+        "value": 0.15391505456085616,
         "images_above": 100
       },
       "99": {
-        "value": 0.2793378340320057,
+        "value": 0.2635343909342333,
         "images_above": 20
       }
     }
@@ -51,51 +57,66 @@
       "total_count": 2000,
       "valid_count": 2000,
       "invalid_count": 0,
-      "minimum": 0.0,
-      "maximum": 0.21007666266578745,
-      "mean": 0.05537466731771345,
-      "median": 0.05201671457716779,
-      "std": 0.03249583318024842
+      "minimum": -0.22103816204556379,
+      "maximum": 0.13573202009277788,
+      "mean": -0.040634857720190896,
+      "median": -0.03980949609206299,
+      "std": 0.04062350352741598,
+      "negative_count": 1709,
+      "zero_count": 0,
+      "positive_count": 291
     },
     "L2_L3": {
       "total_count": 2000,
       "valid_count": 2000,
       "invalid_count": 0,
-      "minimum": 0.0,
-      "maximum": 0.29448543628170437,
-      "mean": 0.07488957072226904,
-      "median": 0.07277794492603828,
-      "std": 0.038640635707351545
+      "minimum": -0.3046165065326886,
+      "maximum": 0.18198734108844578,
+      "mean": -0.06016064356606251,
+      "median": -0.05897574453766398,
+      "std": 0.04178838844940921,
+      "negative_count": 1884,
+      "zero_count": 0,
+      "positive_count": 116
     },
     "L3_L4": {
       "total_count": 2000,
       "valid_count": 2000,
       "invalid_count": 0,
-      "minimum": 0.0,
-      "maximum": 0.280743448163555,
-      "mean": 0.08091007710955188,
-      "median": 0.08088850987565908,
-      "std": 0.042797735068131344
+      "minimum": -0.2578162831346383,
+      "maximum": 0.20214058227585546,
+      "mean": -0.058657773094357386,
+      "median": -0.0631445667846195,
+      "std": 0.05051791628301316,
+      "negative_count": 1804,
+      "zero_count": 0,
+      "positive_count": 196
     },
     "L4_L5": {
       "total_count": 2000,
       "valid_count": 2000,
       "invalid_count": 0,
-      "minimum": 0.0,
-      "maximum": 0.35607671260927237,
-      "mean": 0.08668095250874973,
-      "median": 0.08312913384852996,
-      "std": 0.05090923540271453
+      "minimum": -0.23143567501805318,
+      "maximum": 0.3560767126092723,
+      "mean": -0.03667199598587752,
+      "median": -0.0501850991525558,
+      "std": 0.07107938117417971,
+      "negative_count": 1552,
+      "zero_count": 0,
+      "positive_count": 448
     },
     "L5_S1": {
       "total_count": 2000,
       "valid_count": 2000,
       "invalid_count": 0,
-      "minimum": 0.0,
-      "maximum": 0.43991083636117845,
-      "mean": 0.0903237589240156,
-      "median": 0.0834058676400901,
-      "std": 0.061133999133798696
+      "minimum": -0.3884936369592749,
+      "maximum": 0.4399108363611784,
+      "mean": -0.03357755782796919,
+      "median": -0.039267813397462256,
+      "std": 0.07237319031491568,
+      "negative_count": 1535,
+      "zero_count": 0,
+      "positive_count": 465
     }
   },
   "invalid_reasons": {},
@@ -125,7 +146,10 @@
     "duplicate_annotation_records": 0,
     "images_with_multiple_distinct_annotations": 0
   },
-  "definition": "C1=max(0, lower_right-upper_right, upper_left-lower_left); C2=lower_right-lower_left; S=C1/C2 in lower top-endplate axis",
+  "schema_version": 2,
+  "definition": "P=upper lower-posterior corner; A=lower upper-anterior corner; B=lower upper-posterior corner; u=(B-A)/|B-A|; Q=A+dot(P-A,u)*u on infinite line AB; S=dot(B-P,u)/|B-A|",
+  "sign_convention": "positive: upper posterior corner displaced anterior to B; negative: posterior to B; zero: aligned posterior projections",
+  "max_shift_definition": "algebraic maximum of valid signed shifts, not maximum absolute shift; can be negative when all five shifts are negative",
   "visibility_policy": "Only COCO v=2 is accepted; v=0 and v=1 are invalid",
   "std_ddof": 0,
   "percentile_method": "linear",
@@ -156,31 +180,26 @@
   ],
   "pair_indices": {
     "L1_L2": [
-      2,
       3,
       4,
       5
     ],
     "L2_L3": [
-      6,
       7,
       8,
       9
     ],
     "L3_L4": [
-      10,
       11,
       12,
       13
     ],
     "L4_L5": [
-      14,
       15,
       16,
       17
     ],
     "L5_S1": [
-      18,
       19,
       20,
       21
